@@ -63,5 +63,5 @@ def buildTestDataFromNYT(download=True, articlesDir=".", writeToDir=False):
                 count += 1
 
     print(f"working with {len(dataArr)} articles")
-    testData.setData(dataArr)
+    testData.setDocuments(dataArr)
     return testData

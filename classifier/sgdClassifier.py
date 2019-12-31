@@ -28,7 +28,7 @@ categories."""
     # This function extracts features
     def extractfeatures(self):
         count_vect = CountVectorizer()
-        X_train_counts = count_vect.fit_transform(self.training_data.data)
+        X_train_counts = count_vect.fit_transform(self.training_data.documents)
 
         tfidf_transformer = TfidfTransformer()
         X_train_tfidf = tfidf_transformer.fit_transform(X_train_counts)
@@ -64,9 +64,9 @@ categories."""
 
     def naiveBayesMB(self):
         count_vect = CountVectorizer(stop_words='english')
-        X_train_counts = count_vect.fit_transform(self.training_data.data)
-        X_test_data = count_vect.transform(self.testing_data.data)
-        Y_test_target = count_vect.transform(self.testing_data.data)
+        X_train_counts = count_vect.fit_transform(self.training_data.documents)
+        X_test_data = count_vect.transform(self.testing_data.documents)
+        Y_test_target = count_vect.transform(self.testing_data.documents)
 
         mnb = MultinomialNB()
         mnb.fit(X_train_counts, self.training_data.target)

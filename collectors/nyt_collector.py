@@ -73,21 +73,26 @@ class NytCollector(Collector):
             logger.debug(f"Downloaded {len(r.text)} bytes of data")
             json_data = r.json()
 
-            jq = f".response .docs [] | .web_url"
-            out = pyjq.all(jq, json_data)
+            url_jq = f".response .docs [] | .web_url"
+            url_out = pyjq.all(url_jq, json_data)
+
+            headline_jq = f".response .docs [] | .headline .main"
+            headline_out = pyjq.all(headline_jq, json_data)
 
             # some URLs are empty, clean up
-            cleanUrls = self.cleanup_urls(input_urls=out)
             self.last_refresh = datetime.datetime.now()
-            self.build_datamodel(data=cleanUrls)
+            self.data.id = headline_out
+            self.build_datamodel(urls=url_out)
             loop.call_later(self.frequency, self.gather_data, loop)
 
-    def build_datamodel(self, data) -> DataModel:
+    def build_datamodel(self, urls) -> DataModel:
+        """build datamodel for each Collector's collected data"""
+        self.data.metadata = urls
         count = 0
         dataArr = []
 
         logger.info(f"Attempting to download articles from individual links")
-        for url in data:
+        for url in urls:
             if count > 100:  # if you don't want to download 6200 articles
                 break
             a = Article(url=url)
@@ -95,24 +100,14 @@ class NytCollector(Collector):
                 a.download()
                 a.parse()
             except Exception as ex:
-                print(f"caught {ex} continuing")
+                logger.error(f"caught {ex} continuing")
             if len(a.text):
-                print(f"{len(dataArr)} - downloaded {len(a.text)} bytes")
+                logger.info(f"{len(dataArr)} - downloaded {len(a.text)} bytes")
                 dataArr.append(a.text)
                 with open(self.datapath + "/" + f"{count}.txt", "w") as f:
                     f.write(a.text)
                 count += 1
 
         logger.info(f"working with {len(dataArr)} articles")
-        self.data = DataModel()
-        self.data.setData(dataArr)
-
-    def cleanup_urls(self, input_urls):
-        cleanUrls = []
-        for url in input_urls:
-            if not url:  # some URLs are empty
-                continue
-            cleanUrls.append(url)
-        logger.info(f"Clean url count: {len(cleanUrls)}")
-        return cleanUrls
+        self.data.setDocuments(dataArr)
 
