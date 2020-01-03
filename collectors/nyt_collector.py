@@ -50,19 +50,25 @@ class NytCollector(Collector):
 
     def gather_data(self, loop):
         dataArr = []
-        count = 0
         logger.info(f"Entering gather_data. download_fresh: {self.download_fresh}")
         if not self.download_fresh:
             logger.info(f"Current time is: {datetime.datetime.now().strftime('%c')}")
             logger.info("Building Dataset Building test dataset from NYT's archive of 12/2018.")
-            logger.info(f"Loading articles from f{self.config.datapath}")
-            files = os.listdir(self.config.datapath)
-            files = [os.path.join(self.config.datapath, f) for f in files]
+            logger.info(f"Loading articles from f{self.datapath}")
+            files = os.listdir(self.datapath)
+            files = [os.path.join(self.datapath, f) for f in files]
             files.sort(key=lambda x: os.path.getmtime(x))
-            for file in files:
+            for i, file in enumerate(files):
                 with open(file, "r") as f:
                     dataArr.append(f.read())
-                    count += 1
+                    if len(dataArr[i]) > 10:
+                        self.data.id.append(dataArr[i][0:100])  # first hundred characters of the file are the ID
+                    else:
+                        self.data.id.append(f'NA-article {i}')
+            self.last_refresh = datetime.datetime.now()
+            self.data.id = []
+            self.data.setDocuments(dataArr)
+            loop.call_later(self.frequency, self.gather_data, loop)
         else:
             logger.info(f"Current time is: {datetime.datetime.now().strftime('%c')}")
             logger.info("Building Dataset from NYT's archive of 12/2018. Downloading ...")
@@ -70,7 +76,7 @@ class NytCollector(Collector):
             url = self.url + "?&api-key=" + self.key
             logger.info(f"url: {url}")
             r = requests.get(url)
-            logger.debug(f"Downloaded {len(r.text)} bytes of data")
+            logger.info(f"Downloaded {len(r.text)} bytes of data")
             json_data = r.json()
 
             url_jq = f".response .docs [] | .web_url"
@@ -82,19 +88,20 @@ class NytCollector(Collector):
             # some URLs are empty, clean up
             self.last_refresh = datetime.datetime.now()
             self.data.id = headline_out
-            self.build_datamodel(urls=url_out)
+            self.build_datamodel(id=url_out, metadata=headline_out)
             loop.call_later(self.frequency, self.gather_data, loop)
 
-    def build_datamodel(self, urls) -> DataModel:
+    def build_datamodel(self, id, metadata) -> DataModel:
         """build datamodel for each Collector's collected data"""
-        self.data.metadata = urls
         count = 0
         dataArr = []
 
         logger.info(f"Attempting to download articles from individual links")
-        for url in urls:
+        for i, url in enumerate(id):
             if count > 100:  # if you don't want to download 6200 articles
                 break
+            if not url:
+                continue
             a = Article(url=url)
             try:
                 a.download()
@@ -104,6 +111,8 @@ class NytCollector(Collector):
             if len(a.text):
                 logger.info(f"{len(dataArr)} - downloaded {len(a.text)} bytes")
                 dataArr.append(a.text)
+                self.data.id.append(id[i])
+                self.data.meta.append(metadata[i])
                 with open(self.datapath + "/" + f"{count}.txt", "w") as f:
                     f.write(a.text)
                 count += 1

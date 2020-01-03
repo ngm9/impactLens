@@ -16,13 +16,13 @@ from classifier.sgdClassifier import SgdClassifier
 from collectors.nyt_collector import NytCollector
 from commons.datamodel import DataModel
 
-app = Flask(__name__)             # create an app instance
+app = Flask(__name__)  # create an app instance
 
 logger = logging.getLogger(__name__)
 CONFIG_FILE = "./config/prod.ini"
 GLOVE_FILE = r'../glove.6B.300d.txt'
 WORD_2_VEC_FILE = r'../glove.6B.300d_word2Vec.txt'
-lake = [] # A list of data-models
+lake = []  # A list of data-models
 
 CATEGORY_MAP = {
     'atheism': 0,
@@ -73,11 +73,10 @@ VOCABULARY = {
 }
 
 
-@app.route("/")                   # at the end point /
+@app.route("/")  # at the end point /
 def home():
     # show the top10 ranks for all categories
-    resp = {'message': "Hello, welcome to ImpactLens. Here is the fresh stack rank for each category:"}
-
+    resp = {}
     for d in lake:
         stack = {}
         for index, cat in enumerate(d.target):
@@ -94,7 +93,26 @@ def home():
         for cat in stack.keys():
             resp[REVERSE_CATEGORY_MAP[cat]] = [d.id[index] for index, score in stack[cat]]
 
-    return resp
+    html = "<!DOCTYPE html>" \
+           "<html>" \
+           "<body>" \
+           "<h2>Impact Lens</h2>"
+
+    html += '<table style="width:100%">'
+    for cat in resp:
+        html += '<tr>'
+        # build a table within the table for each category
+        html += '<table style="width:100%">'
+        for i, headline in enumerate(resp[cat]):
+            html += '<tr>'
+            html += f'<td>{i}</td>'
+            html += f'<td>{headline}</td>'
+            html += '</tr>'
+        html += '</table>'
+        html += '</tr>'
+    html += "</table> </body> </html>"
+
+    return html
 
 
 @app.route("/category/<name>")
@@ -129,19 +147,19 @@ def get_glove_model(gloveFile: str, word2VecFile: str):
 
 
 def cleanupdata(doc):
-        testdata1 = doc.lower()
-        cleandata = ''
+    testdata1 = doc.lower()
+    cleandata = ''
 
-        for word in testdata1.split(' '):
-            if word not in stop_words.ENGLISH_STOP_WORDS and len(word) > 1:
-                cleandata = cleandata + ' ' + word
+    for word in testdata1.split(' '):
+        if word not in stop_words.ENGLISH_STOP_WORDS and len(word) > 1:
+            cleandata = cleandata + ' ' + word
 
-        # TODO can use this to do additional preprocessing
-        # symbols = "!\"#$%&()*+-./:;<=>?@[\]^_`{|}~\n"
-        # for i in symbols:
-        #     cleandata = np.char.replace(cleandata, i, ' ')
-        # cleandata = np.char.replace(cleandata, "'", '')
-        return cleandata
+    # TODO can use this to do additional preprocessing
+    # symbols = "!\"#$%&()*+-./:;<=>?@[\]^_`{|}~\n"
+    # for i in symbols:
+    #     cleandata = np.char.replace(cleandata, i, ' ')
+    # cleandata = np.char.replace(cleandata, "'", '')
+    return cleandata
 
 
 def build_stackrank(vocabulary):
@@ -170,6 +188,7 @@ def build_stackrank(vocabulary):
 
         datamodel.scores = sorted(impact_score.items(), key=lambda x: x[1], reverse=True)
 
+
 def enhance_vocabulary(glove_model, vocabulary):
     """Given the model, enhance the given vocabulary and return the enhanced vocabulary."""
     enhanced_vocab = {}
@@ -178,7 +197,7 @@ def enhance_vocabulary(glove_model, vocabulary):
     return enhanced_vocab
 
 
-if __name__ == "__main__":        # on running python app.py
+if __name__ == "__main__":  # on running python app.py
     cparser = configparser.ConfigParser()
     cparser.read(CONFIG_FILE)
     logging.basicConfig(filename=cparser['Log']['filename'], level=cparser['Log']['level'])
@@ -206,8 +225,7 @@ if __name__ == "__main__":        # on running python app.py
     for datamodel in lake:
         classifier.classify(datamodel)
 
-    #model = get_glove_model(GLOVE_FILE, WORD_2_VEC_FILE)
-    #vocab = enhance_vocabulary(glove_model=model, vocabulary=VOCABULARY)
+    # model = get_glove_model(GLOVE_FILE, WORD_2_VEC_FILE)
+    # vocab = enhance_vocabulary(glove_model=model, vocabulary=VOCABULARY)
     build_stackrank(vocabulary=VOCABULARY)
-    app.run(debug=True)                     # run the flask app
-
+    app.run(debug=True)  # run the flask app

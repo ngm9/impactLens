@@ -61,7 +61,6 @@ categories."""
         predicted_svm = self.model.predict(testing_data.documents)
         testing_data.setTarget(predicted_svm)
 
-
     def naiveBayesMB(self):
         count_vect = CountVectorizer(stop_words='english')
         X_train_counts = count_vect.fit_transform(self.training_data.documents)
