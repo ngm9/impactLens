@@ -1,0 +1,10 @@
+Some tasks, in no specific order that this project needs. If you'd like to volunteer, please shoot me an email at naman.g.muley@gmail.com
+
+1. fix HTML for home page
+2. create pages for each category
+3. Currently, the data downloaded is from NYT archive for 2018 December. Move to a rolling daily read
+4. Add other collectors
+5. Add the NB Classifier
+6. Build upon the concept of an impact score. Some things that can be added are aspect based sentiment analysis
+
+
