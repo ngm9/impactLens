@@ -7,10 +7,6 @@ We attempt to identify information that can be potentially impactful to a brand.
 ## Recommended install instructions
 
 My suggestion is to use pipenv. One doesn't have to if you're well verse with how to run a python virtual environment then all the dependencies are mentioned in requirements.txt - install them.
-0. go to git root
-1. pipenv --python 3.7
-2. pipenv shell
-3. pipenv install -r requirements.txt 
 
 ## Run Instructions
 
