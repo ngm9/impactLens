@@ -6,7 +6,7 @@ from commons.datamodel import DataModel
 
 class Classifier:
 
-    def trainModel(self, training_data: DataModel):
+    def trainModel(self, training_data: DataModel, testing_data: DataModel):
         pass
 
     def classify(self, testing_data: DataModel):

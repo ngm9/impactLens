@@ -28,7 +28,7 @@ categories."""
     # This function extracts features
     def extractfeatures(self):
         count_vect = CountVectorizer()
-        X_train_counts = count_vect.fit_transform(self.training_data.documents)
+        X_train_counts = count_vect.fit_transform([d.text for d in self.training_data.documents])
 
         tfidf_transformer = TfidfTransformer()
         X_train_tfidf = tfidf_transformer.fit_transform(X_train_counts)
@@ -37,7 +37,7 @@ categories."""
 
     # This function trains the model
     def trainModel(self, training_data: DataModel, testing_data: DataModel):
-        logger.info("\nTraining the SGD classifier with newsgroup20 data...")
+        logger.info("Training the SGD classifier with newsgroup20 data...")
         self.training_data = training_data
         count_vect, tfidf_transformer = self.extractfeatures()
         self.model = Pipeline(steps=[('vect', count_vect),
@@ -45,12 +45,13 @@ categories."""
                                      ('clf-svm', SGDClassifier(loss='hinge', penalty='l2',
                                                                alpha=1e-3, max_iter=20, random_state=42,
                                                                early_stopping=True, tol=100))])
-        self.model.fit(training_data.documents, training_data.target)
+        self.model.fit([d.text for d in training_data.documents], training_data.targetCategoryList)
         logger.info("Training done. Printing out Accuracy statistics: ")
+
         # Calculate accuracy scores.
-        predicted_svm = self.model.predict(testing_data.documents)
-        logger.info(f"Accuracy: {np.mean(predicted_svm == testing_data.target)}")
-        scoretuple = precision_recall_fscore_support(testing_data.target, predicted_svm, average='macro')
+        predicted_svm = self.model.predict([d.text for d in testing_data.documents])
+        logger.info(f"Accuracy: {np.mean(predicted_svm == testing_data.targetCategoryList)}")
+        scoretuple = precision_recall_fscore_support(testing_data.targetCategoryList, predicted_svm, average='macro')
         logger.info(f"Precision {scoretuple[0]}")
         logger.info(f"Recall {scoretuple[1]}")
         logger.info(f"F1 {scoretuple[2]}")
@@ -58,8 +59,9 @@ categories."""
     def classify(self, testing_data: DataModel):  # NYT is passed into testing_data
         # TODO: should not have to append testing data to a classifier. A classifier should be agnostic of testing data.
         self.testing_data = testing_data
-        predicted_svm = self.model.predict(testing_data.documents)
-        testing_data.setTarget(predicted_svm)
+        textArray = [a.text for a in testing_data.documents]
+        predicted_svm = self.model.predict(textArray)
+        testing_data.setTargetCategories(predicted_svm)
 
     def naiveBayesMB(self):
         count_vect = CountVectorizer(stop_words='english')

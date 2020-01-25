@@ -76,37 +76,42 @@ VOCABULARY = {
 @app.route("/")  # at the end point /
 def home():
     # show the top10 ranks for all categories
-    resp = {}
-    for d in lake:
+    headlines = {}
+    for datum in lake:
         stack = {}
-        for index, cat in enumerate(d.target):
-            if cat not in stack.keys():
-                stack[cat] = []
-            else:
-                logger.info(f"stack[{cat}]:{stack[cat]}")
-                logger.info(f"d: {d}")
-                stack[cat].append((index, d.scores[index]))
-        for cat in stack.keys():
-            s = sorted(stack[cat], key=lambda x: x[1], reverse=True)
+        category_score_map = {}
+        for i, cat in enumerate(datum.targetCategoryList):
+            if cat not in category_score_map.keys():
+                category_score_map[cat] = []
+            category_score_map[cat].append((datum.documents[i], datum.scores[i]))
+
+        for cat in category_score_map.keys():
+            logger.info(f"stack[{cat}] = {category_score_map[cat]}")
+            s = sorted(category_score_map[cat], key=lambda x: x[1], reverse=True)
             stack[cat] = s[0:9]
+            logger.info(f"After sorting and limiting: stack[{cat}]: {stack[cat]}")
 
         for cat in stack.keys():
-            resp[REVERSE_CATEGORY_MAP[cat]] = [d.id[index] for index, score in stack[cat]]
+            headlines[REVERSE_CATEGORY_MAP[cat]] = [(datum.documents[index].headline, datum.documents[index].url)
+                                                    for index, score in enumerate(stack[cat])]
 
     html = "<!DOCTYPE html>" \
            "<html>" \
+           "<style>" \
+           "table, th, td { border: 1px solid black; border-collapse: collapse;}" \
+           "</style>" \
            "<body>" \
            "<h2>Impact Lens</h2>"
 
     html += '<table style="width:100%">'
-    for cat in resp:
+    for cat in headlines:
         html += '<tr>'
         # build a table within the table for each category
-        html += '<table style="width:100%">'
-        for i, headline in enumerate(resp[cat]):
+        html += '<table style="width:33%">'
+        html += f'<tr><th>{cat}</th></tr>'
+        for i, tup in enumerate(headlines[cat]):
             html += '<tr>'
-            html += f'<td>{i}</td>'
-            html += f'<td>{headline}</td>'
+            html += f'<td><a href="{tup[1]}">{tup[0]}</a></td>'
             html += '</tr>'
         html += '</table>'
         html += '</tr>'
@@ -128,12 +133,12 @@ def train_classifier(classifier: Classifier):
     testData_20newsgroup = fetch_20newsgroups(subset='test', shuffle=True)
 
     testData = DataModel()
-    testData.setDocuments(testData_20newsgroup.data)
-    testData.setTarget(testData_20newsgroup.target)
+    testData.setDocumentsFromRawTextArray(testData_20newsgroup.data)
+    testData.setTargetCategories(testData_20newsgroup.target)
 
     classifier_training_data = DataModel()
-    classifier_training_data.setDocuments(trainData_20newsgroup.data)
-    classifier_training_data.setTarget(trainData_20newsgroup.target)
+    classifier_training_data.setDocumentsFromRawTextArray(trainData_20newsgroup.data)
+    classifier_training_data.setTargetCategories(trainData_20newsgroup.target)
 
     classifier.trainModel(classifier_training_data, testData)
 
@@ -147,7 +152,7 @@ def get_glove_model(gloveFile: str, word2VecFile: str):
 
 
 def cleanupdata(doc):
-    testdata1 = doc.lower()
+    testdata1 = doc.text.lower()
     cleandata = ''
 
     for word in testdata1.split(' '):
@@ -162,15 +167,15 @@ def cleanupdata(doc):
     return cleandata
 
 
-def build_stackrank(vocabulary):
-    """Out of the complete set of predictions, given the vocabulary, build a top 10 for each category"""
-    for datamodel in lake:
-        impact_score = {}
-        for index, cat in enumerate(datamodel.target):
+def build_impact_scores(vocabulary):
+    """Out of the complete set of predictions, given the vocabulary, build a score for each article that denotes how
+    impact-ful that article will be for that vocabulary"""
+    for datum in lake:
+        impact_score = []
+        for index, cat in enumerate(datum.targetCategoryList):
             vcat = vocabulary[REVERSE_CATEGORY_MAP[cat]]
-            impact_score[index] = 0
             freq = defaultdict(float)
-            newdata = cleanupdata(datamodel.documents[index])
+            newdata = cleanupdata(datum.documents[index])
 
             for word in newdata.split(' '):
                 freq[word] += 1.0
@@ -181,12 +186,9 @@ def build_stackrank(vocabulary):
 
             tf = count_vocab_words / len(newdata.split(' '))
             # since we have already computed the importance of these documents using classification, we stop here and get the score
-            impact_score[index] = tf * 100
-        s = sum(score for i, score in impact_score.items())
-        for i, score in impact_score.items():
-            impact_score[i] = score / s
-
-        datamodel.scores = sorted(impact_score.items(), key=lambda x: x[1], reverse=True)
+            impact_score.append(tf * 100)
+        s = sum(impact_score)
+        datum.scores = [score / s for score in impact_score]
 
 
 def enhance_vocabulary(glove_model, vocabulary):
@@ -222,10 +224,10 @@ if __name__ == "__main__":  # on running python app.py
     # TODO: refactor to handle multiple collectors.
     lake.append(nytCollector.data)
     predictions = []
-    for datamodel in lake:
-        classifier.classify(datamodel)
+    for datum in lake:
+        classifier.classify(datum)
 
     # model = get_glove_model(GLOVE_FILE, WORD_2_VEC_FILE)
     # vocab = enhance_vocabulary(glove_model=model, vocabulary=VOCABULARY)
-    build_stackrank(vocabulary=VOCABULARY)
+    build_impact_scores(vocabulary=VOCABULARY)
     app.run(debug=True)  # run the flask app

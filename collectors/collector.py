@@ -10,9 +10,6 @@ class Collector:
     data = attrib(default=DataModel())  # DataModel representation of the collected data
     download_fresh = attrib(default="yes")  # If download_fresh is false, use previously downloaded data.
 
-    def build_config(self, config_file):
-        pass
-
     def run(self, loop):
         pass
 
