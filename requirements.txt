@@ -26,7 +26,7 @@ numpy==1.18.1
 Pillow==7.0.0
 pyjq==2.4.0
 python-dateutil==2.8.1
-PyYAML==5.3
+PyYAML==5.4
 requests==2.22.0
 requests-file==1.4.3
 s3transfer==0.2.1
