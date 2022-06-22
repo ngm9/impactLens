@@ -22,7 +22,7 @@ lxml==4.4.2
 MarkupSafe==1.1.1
 newspaper3k==0.2.8
 nltk==3.4.5
-numpy==1.18.1
+numpy==1.22.0
 Pillow==7.0.0
 pyjq==2.4.0
 python-dateutil==2.8.1
